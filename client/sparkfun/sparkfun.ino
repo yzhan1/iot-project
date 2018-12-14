@@ -1,15 +1,20 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
-#include <Ethernet.h>
 #include <SPI.h>
 #include <TimeLib.h>
-#include "RestClient.h"
+
+#include <ESP8266HTTPClient.h>
+
+#define HTTP_DEBUG
 
 //////////////////////
 // WiFi Definitions //
 //////////////////////
-const char WiFiSSID[] = "peteriphone";
-const char WiFiPSK[] = "12345678";
+//const char WiFiSSID[] = "peteriphone";
+//const char WiFiPSK[] = "12345678";
+
+const char WiFiSSID[] = "FREEHOLD";
+const char WiFiPSK[] = "wangmomo";
 
 /////////////////////
 // Pin Definitions //
@@ -23,14 +28,15 @@ const int READ_PIN = 5;
 
 int state = 0; // closed
 
-WiFiServer server(80);
+String server_addr = "192.168.0.111";
+uint16_t server_port = 3000;
 
-RestClient restClient = RestClient("172.20.10.4", 3000);
+WiFiServer server(80);
 
 void loop() {
   int input = digitalRead(READ_PIN);
   int doorClosed = -1;
-  char* path = "";
+  String path = "";
   WiFiClient client = server.available();
   
   if (client) {
@@ -43,7 +49,7 @@ void loop() {
       path = "enter";
       // notify arduino
       digitalWrite(OUTPUT_PIN, HIGH);
-      delay(1000);
+      delay(2000);
       digitalWrite(OUTPUT_PIN, LOW);
   
       Serial.println("OPENED");
@@ -53,7 +59,7 @@ void loop() {
       path = "leave";
       // notify arduino
       digitalWrite(OUTPUT_PIN, HIGH);
-      delay(1000);
+      delay(2000);
       digitalWrite(OUTPUT_PIN, LOW);
   
       Serial.println("CLOSED");
@@ -77,14 +83,53 @@ void loop() {
     Serial.println("Client disonnected");
   }
   
-  // Otherwise request will be invalid. We'll say as much in HTML
+  // Always push result to server
+  HTTPClient httpclient;
+  WiFiClient client2;
+  
+  
   if (state != input) {
+    Serial.println("changed state");
     state = input;
+    if(state) {
+      //closed
+      path = "/enter";
+    } else {
+      path = "/leave";
+    }
     int h = hour();
     String data = "ts=" + h;
-    int statusCode = restClient.post(path, data.c_str());
-    Serial.println("finished posting data:");
-    Serial.println(statusCode);
+
+    Serial.print("[HTTP] BEGIN POST...\n");
+
+    if (httpclient.begin(client2,server_addr, server_port, path, false)) {  // HTTP
+
+
+      Serial.print("[HTTP] POST...\n");
+      // start connection and send HTTP header
+      int httpCode = httpclient.POST(data);
+
+      // httpCode will be negative on error
+      if (httpCode > 0) {
+        // HTTP header has been send and Server response header has been handled
+        Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+
+        // file found at server
+        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+          Serial.print("[HTTP] OK\n");
+        } else {
+          Serial.print("[HTTP] Code:");
+          Serial.println(httpCode);
+          
+        }
+      } else {
+        Serial.printf("[HTTP] POST... failed, error: %s\n", httpclient.errorToString(httpCode).c_str());
+      }
+
+      httpclient.end();
+    } else {
+      Serial.printf("[HTTP} Unable to connect\n");
+    }
   }
   delay(1);
 }
@@ -114,8 +159,8 @@ void connectWiFi() {
   // is connected to a WiFi network.
   while (WiFi.status() != WL_CONNECTED) {
     // Blink the LED
-    digitalWrite(LED_PIN, ledStatus); // Write LED high/low
-    ledStatus = (ledStatus == HIGH) ? LOW : HIGH;
+    //digitalWrite(LED_PIN, ledStatus); // Write LED high/low
+    //ledStatus = (ledStatus == HIGH) ? LOW : HIGH;
 
     // Delays allow the ESP8266 to perform critical tasks
     // defined outside of the sketch. These tasks include
