@@ -27,6 +27,9 @@ WiFiServer server(80);
 
 RestClient restClient = RestClient("172.20.10.4", 3000);
 
+// use when deployed to cloud
+// RestClient restClient = RestClient("url.herokuapp.com");
+
 void loop() {
   int input = digitalRead(READ_PIN);
   int doorClosed = -1;
@@ -40,13 +43,13 @@ void loop() {
     
     if (req.indexOf("/open") != -1) {
       doorClosed = 0;
-      path = "enter";
+      path = "/enter";
       notifyArduino();
       Serial.println("OPENED");
       
     } else if (req.indexOf("/close") != -1) {
       doorClosed = 1;
-      path = "leave";
+      path = "/leave";
       notifyArduino();
       Serial.println("CLOSED");
     }
@@ -74,9 +77,12 @@ void loop() {
     state = input;
     int h = hour();
     String data = "ts=" + h;
-    int statusCode = restClient.post(path, data.c_str());
-    Serial.println("finished posting data:");
+    String resp = "";
+    int statusCode = restClient.post(path, data.c_str(), &resp);
+    Serial.println("Finished posting data:");
     Serial.println(statusCode);
+    Serial.println("Resp body:");
+    Serial.println(resp);
   }
   delay(1);
 }
@@ -90,6 +96,7 @@ void notifyArduino() {
 void setup() {
   initHardware();
   connectWiFi();
+  restClient.dhcp();
   pinMode(OUTPUT_PIN, OUTPUT);
   digitalWrite(OUTPUT_PIN, LOW);
   pinMode(READ_PIN, INPUT);
