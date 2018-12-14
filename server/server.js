@@ -11,12 +11,13 @@ for (let i = 0; i < 24; i++) {
   enters[i] = leaves[i] = 0;
 }
 
-enters[1] = 21;
-enters[2] = 22;
-enters[3] = 20;
+// some pre-populated test data
+enters[1] = 1;
+enters[2] = 2;
+enters[3] = 1;
 
-leaves[4] = 5;
-leaves[8] = 9;
+leaves[4] = 1;
+leaves[8] = 1;
 leaves[7] = 2;
 
 var lastEnterTime = "N/A";
@@ -60,9 +61,5 @@ app.post('/leave', (req, res) => {
   leaves[hour] += 1;
   res.send('ok');
 });
-
-function parseHour(ts) {
-  return ts;
-}
 
 app.listen(3000, () => console.log('Running on port 3000!'));
