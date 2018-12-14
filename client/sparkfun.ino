@@ -41,21 +41,13 @@ void loop() {
     if (req.indexOf("/open") != -1) {
       doorClosed = 0;
       path = "enter";
-      // notify arduino
-      digitalWrite(OUTPUT_PIN, HIGH);
-      delay(1000);
-      digitalWrite(OUTPUT_PIN, LOW);
-  
+      notifyArduino();
       Serial.println("OPENED");
       
     } else if (req.indexOf("/close") != -1) {
       doorClosed = 1;
       path = "leave";
-      // notify arduino
-      digitalWrite(OUTPUT_PIN, HIGH);
-      delay(1000);
-      digitalWrite(OUTPUT_PIN, LOW);
-  
+      notifyArduino();
       Serial.println("CLOSED");
     }
 
@@ -87,6 +79,12 @@ void loop() {
     Serial.println(statusCode);
   }
   delay(1);
+}
+
+void notifyArduino() {
+  digitalWrite(OUTPUT_PIN, HIGH);
+  delay(1000);
+  digitalWrite(OUTPUT_PIN, LOW);
 }
 
 void setup() {
